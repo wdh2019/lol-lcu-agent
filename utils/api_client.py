@@ -19,11 +19,40 @@ class ApiClient:
         """
         self.live_data_url = live_data_url
         self.lcu_eog_endpoint = lcu_eog_endpoint
+        self.lcu_port = None
+        self.lcu_token = None
         
         # 创建一个不验证SSL证书的Session
         self.session = requests.Session()
         self.session.verify = False
         
+    def set_lcu_credentials(self, port, token):
+        """
+        设置LCU凭证
+        
+        参数:
+            port: LCU端口
+            token: LCU认证令牌
+        """
+        self.lcu_port = port
+        self.lcu_token = token
+        
+    def get_end_of_game_data(self, timeout=10):
+        """
+        获取赛后数据，使用已设置的LCU凭证
+        
+        参数:
+            timeout: 请求超时时间(秒)
+            
+        返回:
+            tuple: (成功标志, 数据/错误信息)
+        """
+        if not self.lcu_port or not self.lcu_token:
+            return False, "LCU凭证未设置，请先调用set_lcu_credentials方法"
+            
+        success, data, _ = self.get_postgame_data(self.lcu_port, self.lcu_token, timeout)
+        return success, data
+    
     def get_live_game_data(self, timeout=2):
         """
         获取游戏内实时数据

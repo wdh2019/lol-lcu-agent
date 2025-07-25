@@ -2,7 +2,7 @@ import subprocess
 import re
 import requests
 import os
-from system_utils import list_running_processes
+from .system_utils import list_running_processes
 
 def get_lcu_credentials(lcu_port="", lcu_token=""):
     """
