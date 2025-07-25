@@ -21,7 +21,7 @@ if __name__ == "__main__":
     else:
         # 默认启动UI界面
         try:
-            from ui.main_window import main as run_ui
+            from src.ui.main_window import main as run_ui
             print("正在启动图形界面...")
             run_ui()
         except ImportError as e:
