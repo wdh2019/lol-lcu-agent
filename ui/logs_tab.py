@@ -5,11 +5,11 @@ import os
 import datetime
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QPushButton, 
                             QLabel, QTableWidget, QTableWidgetItem, QHeaderView,
-                            QComboBox)
+                            QComboBox, QFileDialog)
 from PyQt5.QtCore import Qt
 
 from .base_tab import BaseTab
-from .ui_utils import format_file_size, view_json_content, export_file
+from .ui_utils import format_file_size, view_json_content, export_file, export_files_to_zip
 
 class LogsTab(BaseTab):
     """日志管理标签页"""
@@ -35,6 +35,7 @@ class LogsTab(BaseTab):
         self.log_table.setColumnCount(3)
         self.log_table.setHorizontalHeaderLabels(["文件名", "大小", "时间"])
         self.log_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
+        self.log_table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeToContents)  # 时间列自适应内容宽度
         self.log_table.setSelectionBehavior(QTableWidget.SelectRows)  # 整行选择
         self.log_table.setSelectionMode(QTableWidget.SingleSelection)  # 单选
         self.log_table.setAlternatingRowColors(True)  # 设置交替行颜色
@@ -47,21 +48,35 @@ class LogsTab(BaseTab):
         self.upload_button = QPushButton("上传选中文件")
         self.view_button = QPushButton("查看文件内容")
         self.export_button = QPushButton("导出文件")
+        self.export_all_button = QPushButton("导出对局日志为压缩包")
         
-        # 连接按钮点击事件
+        # 创建第二行按钮布局
+        button_layout2 = QHBoxLayout()
+        self.export_all_logs_button = QPushButton("导出所有日志为压缩包")
+        button_layout2.addWidget(self.export_all_logs_button)
+        
+        # 按钮点击事件
         self.upload_button.clicked.connect(self.upload_selected_log)
         self.view_button.clicked.connect(self.view_log_content)
         self.export_button.clicked.connect(self.export_log_file)
+        self.export_all_button.clicked.connect(self.export_all_log_files)
+        self.export_all_logs_button.clicked.connect(self.export_all_logs)
         
         # 初始状态下禁用按钮，需要选择日志文件后才启用
         self.upload_button.setEnabled(False)
         self.view_button.setEnabled(False)
         self.export_button.setEnabled(False)
+        self.export_all_button.setEnabled(True)  # 这个按钮只要选择了对局就可以启用
+        self.export_all_logs_button.setEnabled(True)  # 这个按钮始终可用
         
         button_layout.addWidget(self.upload_button)
         button_layout.addWidget(self.view_button)
         button_layout.addWidget(self.export_button)
+        button_layout.addWidget(self.export_all_button)
         layout.addLayout(button_layout)
+        
+        # 添加第二行按钮
+        layout.addLayout(button_layout2)
         
         # 连接选择变化信号
         self.game_selector.currentIndexChanged.connect(self.on_game_selected)
@@ -111,7 +126,10 @@ class LogsTab(BaseTab):
     def on_game_selected(self, index):
         """当选择游戏时触发"""
         if index < 0:
+            self.export_all_button.setEnabled(False)  # 禁用导出全部按钮
             return
+        else:
+            self.export_all_button.setEnabled(True)  # 启用导出全部按钮
         
         # 清空日志文件表格
         self.log_table.setRowCount(0)
@@ -258,3 +276,111 @@ class LogsTab(BaseTab):
             return
         
         export_file(self, log_path)
+        
+    def export_all_log_files(self):
+        """导出当前对局的所有日志文件为一个zip压缩包"""
+        # 获取当前选择的游戏文件夹
+        current_index = self.game_selector.currentIndex()
+        if current_index < 0:
+            self.show_warning("导出错误", "请先选择一个对局")
+            return
+            
+        folder = self.game_selector.itemData(current_index)
+        if folder is None:
+            self.show_warning("导出错误", "无效的对局选择")
+            return
+        
+        # 获取当前配置中的日志目录
+        current_config = self.config_manager.current_config
+        live_dir = current_config.get("LOG_DIR_BASE_LIVE", "game_logs_live")
+        postgame_dir = current_config.get("LOG_DIR_BASE_POSTGAME", "game_logs_postgame")
+        
+        # 需要打包的文件列表
+        files_to_zip = []
+        
+        # 检查实时数据日志
+        live_path = os.path.join(live_dir, folder)
+        if os.path.exists(live_path):
+            for file in os.listdir(live_path):
+                if file.endswith('.json'):
+                    files_to_zip.append({
+                        'full_path': os.path.join(live_path, file),
+                        'archive_name': f"live/{file}"  # 在zip内的相对路径
+                    })
+        
+        # 检查赛后数据日志
+        postgame_path = os.path.join(postgame_dir, folder)
+        if os.path.exists(postgame_path):
+            for file in os.listdir(postgame_path):
+                if file.endswith('.json'):
+                    files_to_zip.append({
+                        'full_path': os.path.join(postgame_path, file),
+                        'archive_name': f"postgame/{file}"  # 在zip内的相对路径
+                    })
+        
+        # 使用公共方法导出文件
+        default_name = f"game_logs_{folder}.zip"
+        export_files_to_zip(self, files_to_zip, default_name=default_name)
+    
+    def export_all_logs(self):
+        """导出所有日志目录下的所有日志文件为一个压缩包"""
+        self.update_status("准备导出所有日志文件...")
+        
+        # 获取当前配置中的日志目录
+        current_config = self.config_manager.current_config
+        live_dir = current_config.get("LOG_DIR_BASE_LIVE", "game_logs_live")
+        postgame_dir = current_config.get("LOG_DIR_BASE_POSTGAME", "game_logs_postgame")
+        
+        # 生成时间戳，用于压缩包文件名
+        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        default_name = f"all_game_logs_{timestamp}.zip"
+        
+        # 需要打包的文件列表
+        files_to_zip = []
+        
+        # 遍历实时数据日志目录下的所有文件
+        if os.path.exists(live_dir):
+            for game_folder in os.listdir(live_dir):
+                game_folder_path = os.path.join(live_dir, game_folder)
+                if os.path.isdir(game_folder_path):
+                    for file in os.listdir(game_folder_path):
+                        if file.endswith('.json'):
+                            full_path = os.path.join(game_folder_path, file)
+                            archive_name = f"live/{game_folder}/{file}"
+                            files_to_zip.append({
+                                'full_path': full_path,
+                                'archive_name': archive_name
+                            })
+        
+        # 遍历赛后数据日志目录下的所有文件
+        if os.path.exists(postgame_dir):
+            for game_folder in os.listdir(postgame_dir):
+                game_folder_path = os.path.join(postgame_dir, game_folder)
+                if os.path.isdir(game_folder_path):
+                    for file in os.listdir(game_folder_path):
+                        if file.endswith('.json'):
+                            full_path = os.path.join(game_folder_path, file)
+                            archive_name = f"postgame/{game_folder}/{file}"
+                            files_to_zip.append({
+                                'full_path': full_path,
+                                'archive_name': archive_name
+                            })
+        
+        if not files_to_zip:
+            self.show_warning("导出错误", "未找到任何日志文件")
+            return
+            
+        self.update_status(f"正在准备导出 {len(files_to_zip)} 个日志文件...")
+        
+        # 由于文件数量可能很多，先提示用户
+        if len(files_to_zip) > 100:  # 如果文件数量超过100个，提示用户
+            confirm = self.show_confirm(
+                "导出确认", 
+                f"将要导出 {len(files_to_zip)} 个日志文件，可能需要一些时间。是否继续？"
+            )
+            if not confirm:
+                self.update_status("导出操作已取消")
+                return
+        
+        # 使用公共方法导出文件
+        export_files_to_zip(self, files_to_zip, default_name=default_name)

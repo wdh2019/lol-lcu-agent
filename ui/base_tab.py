@@ -30,9 +30,9 @@ class BaseTab(QWidget):
             return self.config_manager.current_config.get(key, default)
         return default
     
-    def show_message(self, title, message, icon=QMessageBox.Information):
+    def show_message(self, title, message):
         """显示消息对话框"""
-        QMessageBox.information(self, title, message, icon)
+        QMessageBox.information(self, title, message)
         
     def show_error(self, title, message):
         """显示错误对话框"""

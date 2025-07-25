@@ -4,6 +4,7 @@ UI共用工具函数
 import os
 import json
 import datetime
+import zipfile
 from PyQt5.QtWidgets import QFileDialog, QDialog, QVBoxLayout, QTextEdit
 
 def format_file_size(size_bytes):
@@ -122,4 +123,58 @@ def export_file(parent, source_path, default_name=None):
     except Exception as e:
         parent.show_error("导出错误", f"导出文件时发生异常:\n{str(e)}")
         parent.update_status(f"导出失败: {str(e)}")
+        return False
+
+def export_files_to_zip(parent, file_list, save_path=None, default_name="logs_export.zip", file_type_filter="ZIP文件 (*.zip);;所有文件 (*)"):
+    """
+    将多个文件导出为ZIP压缩包
+    
+    参数:
+        parent: 父窗口，用于显示消息和状态
+        file_list: 文件信息列表，每项为字典 {'full_path': 完整路径, 'archive_name': 在压缩包内的路径}
+        save_path: 保存路径，如果为None则弹出对话框选择
+        default_name: 默认文件名
+        file_type_filter: 文件类型过滤器
+    
+    返回:
+        成功返回True，失败返回False
+    """
+    if not file_list:
+        parent.show_warning("导出错误", "没有可导出的文件")
+        return False
+    
+    # 如果没有指定保存路径，则弹出选择对话框
+    if save_path is None:
+        save_path, _ = QFileDialog.getSaveFileName(
+            parent, "导出为压缩包", 
+            default_name, 
+            file_type_filter
+        )
+        
+        if not save_path:  # 用户取消
+            return False
+    
+    # 确保文件路径以.zip结尾
+    if not save_path.lower().endswith('.zip'):
+        save_path += '.zip'
+        
+    try:
+        # 创建ZIP文件
+        parent.update_status(f"正在创建压缩包，共 {len(file_list)} 个文件...")
+        with zipfile.ZipFile(save_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+            for file_info in file_list:
+                # 检查文件是否存在
+                if not os.path.exists(file_info['full_path']):
+                    parent.update_status(f"跳过不存在的文件: {file_info['full_path']}")
+                    continue
+                    
+                # 将文件写入压缩包
+                zipf.write(file_info['full_path'], file_info['archive_name'])
+        
+        parent.show_message("导出成功", f"文件已成功导出为压缩包:\n{save_path}")
+        parent.update_status(f"已导出压缩包: {os.path.basename(save_path)}")
+        return True
+    except Exception as e:
+        parent.show_error("导出错误", f"创建压缩包时发生异常:\n{str(e)}")
+        parent.update_status(f"导出压缩包失败: {str(e)}")
         return False
