@@ -1,2 +1,5 @@
 game_logs_live/
 game_logs_postgame/
+process_logs/
+
+__pycache__/
