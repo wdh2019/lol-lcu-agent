@@ -47,6 +47,7 @@ def build_executable(one_file=True, console=False):
             spec_path,
         ]
         print("使用已存在的spec文件构建...")
+        print(f"Spec文件路径: {spec_path}")
     else:
         # 构建命令
         cmd = [

@@ -1,5 +1,6 @@
 game_logs_live/
 game_logs_postgame/
 
+build/output/
 dist/
 __pycache__/

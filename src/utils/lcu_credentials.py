@@ -2,8 +2,16 @@ import subprocess
 import re
 import requests
 import os
+import ctypes
 from .system_utils import list_running_processes
 from .log_manager import get_logger
+
+def is_admin():
+    """检查当前进程是否具有管理员权限"""
+    try:
+        return ctypes.windll.shell32.IsUserAnAdmin()
+    except:
+        return False
 
 def get_lcu_credentials(lcu_port="", lcu_token=""):
     """
@@ -19,6 +27,19 @@ def get_lcu_credentials(lcu_port="", lcu_token=""):
     """
     # 使用单例日志管理器
     log_manager = get_logger()
+    
+    # 检查管理员权限
+    if not is_admin():
+        error_msg = "警告: 当前进程没有管理员权限，可能无法获取LCU进程信息"
+        print(error_msg)
+        if log_manager:
+            log_manager.warning(error_msg)
+    else:
+        success_msg = "确认: 当前进程具有管理员权限"
+        print(success_msg)
+        if log_manager:
+            log_manager.info(success_msg)
+            
     try:
         # 首先尝试通过命令行动态获取
         log_msg = "尝试通过命令行动态获取LCU凭证..."
@@ -26,14 +47,26 @@ def get_lcu_credentials(lcu_port="", lcu_token=""):
         if log_manager:
             log_manager.info(log_msg)
             
-        # 尝试使用PowerShell获取更可靠的结果
-        powershell_command = f'powershell "Get-WmiObject Win32_Process -Filter \\"name = \'LeagueClientUx.exe\'\\"|Select-Object CommandLine | Format-List"'
-        log_msg = f"执行命令: {powershell_command}"
+        # 使用wmic命令获取进程信息，通常能更好地继承管理员权限
+        wmic_command = 'wmic process where name="LeagueClientUx.exe" get commandline /format:list'
+        
+        log_msg = f"执行命令: {wmic_command}"
         print(log_msg)
         if log_manager:
             log_manager.debug(log_msg)
         
-        output = subprocess.check_output(powershell_command, shell=True, text=True, stderr=subprocess.DEVNULL)
+        # 创建subprocess时使用管理员权限
+        startupinfo = subprocess.STARTUPINFO()
+        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+        startupinfo.wShowWindow = subprocess.SW_HIDE
+        
+        output = subprocess.check_output(
+            wmic_command, 
+            shell=True, 
+            text=True, 
+            stderr=subprocess.DEVNULL,
+            startupinfo=startupinfo
+        )
         log_msg = f"命令输出长度: {len(output)} 字符"
         print(log_msg)
         if log_manager:
@@ -49,6 +82,9 @@ def get_lcu_credentials(lcu_port="", lcu_token=""):
         # 使用正则表达式从命令行参数中提取端口和Token
         port_match = re.search(r'--app-port=(\d+)', output)
         token_match = re.search(r'--remoting-auth-token=([\w-]+)', output)
+        log_msg = f"port_match: {port_match}, token_match: {token_match}"
+        print(log_msg)
+        log_manager.info(log_msg)
 
         if port_match:
             port = port_match.group(1)
@@ -94,16 +130,18 @@ def get_lcu_credentials(lcu_port="", lcu_token=""):
                     log_manager.error(log_msg)
                 return None, None
     except subprocess.SubprocessError as e:
-        error_msg = f"subprocess错误: {e}"
+        error_msg = f"WMIC命令执行错误: {e}"
         print(error_msg)
         if log_manager:
             log_manager.error(error_msg)
         
-        tip_msg = "\n【重要提示】由于系统安全限制，获取LCU进程参数需要管理员权限。\n" + \
-                  "请以管理员身份重新运行此脚本：\n" + \
-                  "1. 右键点击命令提示符(cmd)或PowerShell，选择\"以管理员身份运行\"\n" + \
-                  "2. 导航到脚本所在目录\n" + \
-                  "3. 执行命令: python main.py"
+        tip_msg = "\n【重要提示】WMIC命令执行失败，可能的原因:\n" + \
+                  "1. 程序没有以管理员权限运行\n" + \
+                  "2. WMI服务未启动或异常\n" + \
+                  "3. 系统权限限制\n" + \
+                  "建议解决方案:\n" + \
+                  "- 右键以管理员身份运行程序\n" + \
+                  "- 确保Windows Management Instrumentation服务正在运行"
         print(tip_msg)
         if log_manager:
             log_manager.warning(tip_msg)
@@ -120,8 +158,12 @@ def get_lcu_credentials(lcu_port="", lcu_token=""):
         
         tip_msg = "\n【重要提示】无法获取LCU凭证，可能的原因:\n" + \
                   "1. 英雄联盟客户端未启动\n" + \
-                  "2. 需要管理员权限才能获取进程参数\n" + \
-                  "请确保客户端正在运行，然后以管理员身份运行此脚本"
+                  "2. 程序需要管理员权限才能获取进程参数\n" + \
+                  "3. WMI服务异常\n" + \
+                  "建议解决方案:\n" + \
+                  "- 确保客户端正在运行\n" + \
+                  "- 右键以管理员身份运行程序\n" + \
+                  "- 检查Windows服务是否正常"
         print(tip_msg)
         if log_manager:
             log_manager.warning(tip_msg)
