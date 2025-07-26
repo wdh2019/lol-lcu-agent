@@ -125,56 +125,116 @@ def export_file(parent, source_path, default_name=None):
         parent.update_status(f"导出失败: {str(e)}")
         return False
 
-def export_files_to_zip(parent, file_list, save_path=None, default_name="logs_export.zip", file_type_filter="ZIP文件 (*.zip);;所有文件 (*)"):
+def export_files_to_zip(parent, files_to_zip, default_name=None):
     """
-    将多个文件导出为ZIP压缩包
+    将多个文件导出为一个zip压缩包
     
     参数:
-        parent: 父窗口，用于显示消息和状态
-        file_list: 文件信息列表，每项为字典 {'full_path': 完整路径, 'archive_name': 在压缩包内的路径}
-        save_path: 保存路径，如果为None则弹出对话框选择
-        default_name: 默认文件名
-        file_type_filter: 文件类型过滤器
-    
-    返回:
-        成功返回True，失败返回False
+        parent: 父窗口
+        files_to_zip: 要打包的文件列表，每个元素是一个字典，包含 full_path 和 archive_name
+        default_name: 默认保存的压缩包文件名
     """
-    if not file_list:
-        parent.show_warning("导出错误", "没有可导出的文件")
+    # 如果文件列表为空，直接返回
+    if not files_to_zip:
+        parent.show_warning("导出错误", "没有找到可导出的文件")
         return False
     
-    # 如果没有指定保存路径，则弹出选择对话框
-    if save_path is None:
-        save_path, _ = QFileDialog.getSaveFileName(
-            parent, "导出为压缩包", 
-            default_name, 
-            file_type_filter
-        )
-        
-        if not save_path:  # 用户取消
-            return False
+    # 设置默认保存的文件名
+    if default_name is None:
+        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        default_name = f"exported_files_{timestamp}.zip"
     
-    # 确保文件路径以.zip结尾
+    # 让用户选择保存位置
+    save_path, _ = QFileDialog.getSaveFileName(parent, "导出为ZIP", default_name, "ZIP文件 (*.zip)")
+    
+    if not save_path:
+        return False  # 用户取消
+    
+    # 如果未指定.zip扩展名，添加它
     if not save_path.lower().endswith('.zip'):
         save_path += '.zip'
-        
+    
     try:
         # 创建ZIP文件
-        parent.update_status(f"正在创建压缩包，共 {len(file_list)} 个文件...")
-        with zipfile.ZipFile(save_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
-            for file_info in file_list:
-                # 检查文件是否存在
-                if not os.path.exists(file_info['full_path']):
-                    parent.update_status(f"跳过不存在的文件: {file_info['full_path']}")
-                    continue
-                    
-                # 将文件写入压缩包
+        with zipfile.ZipFile(save_path, 'w') as zipf:
+            # 添加所有文件
+            for file_info in files_to_zip:
                 zipf.write(file_info['full_path'], file_info['archive_name'])
         
-        parent.show_message("导出成功", f"文件已成功导出为压缩包:\n{save_path}")
-        parent.update_status(f"已导出压缩包: {os.path.basename(save_path)}")
+        parent.show_message("导出成功", f"已成功导出 {len(files_to_zip)} 个文件到:\n{save_path}")
         return True
     except Exception as e:
-        parent.show_error("导出错误", f"创建压缩包时发生异常:\n{str(e)}")
-        parent.update_status(f"导出压缩包失败: {str(e)}")
+        parent.show_error("导出错误", f"创建ZIP文件时发生错误:\n{str(e)}")
         return False
+
+def export_config_file(parent, config_manager, default_name=None):
+    """
+    导出配置文件
+    
+    参数:
+        parent: 父窗口
+        config_manager: 配置管理器
+        default_name: 默认保存的文件名
+    """
+    if default_name is None:
+        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        default_name = f"lcu_agent_config_{timestamp}.json"
+    
+    # 让用户选择保存位置
+    save_path, _ = QFileDialog.getSaveFileName(parent, "导出配置文件", default_name, "JSON文件 (*.json)")
+    
+    if not save_path:
+        return False  # 用户取消
+    
+    # 如果未指定.json扩展名，添加它
+    if not save_path.lower().endswith('.json'):
+        save_path += '.json'
+    
+    try:
+        # 获取当前配置
+        config_data = config_manager.current_config
+        
+        # 写入JSON文件
+        with open(save_path, 'w', encoding='utf-8') as f:
+            json.dump(config_data, f, indent=4, ensure_ascii=False)
+        
+        parent.show_message("导出成功", f"配置已成功导出到:\n{save_path}")
+        return True
+    except Exception as e:
+        parent.show_error("导出错误", f"导出配置文件时发生错误:\n{str(e)}")
+        return False
+
+def import_config_file(parent, config_manager):
+    """
+    导入配置文件
+    
+    参数:
+        parent: 父窗口
+        config_manager: 配置管理器
+    """
+    # 让用户选择配置文件
+    file_path, _ = QFileDialog.getOpenFileName(parent, "导入配置文件", "", "JSON文件 (*.json)")
+    
+    if not file_path:
+        return None  # 用户取消
+    
+    try:
+        # 读取配置文件
+        with open(file_path, 'r', encoding='utf-8') as f:
+            config_data = json.load(f)
+        
+        # 验证配置数据
+        required_keys = ["LIVE_DATA_URL", "LCU_EOG_ENDPOINT", "LOG_DIR_BASE_LIVE", "LOG_DIR_BASE_POSTGAME"]
+        missing_keys = [key for key in required_keys if key not in config_data]
+        
+        if missing_keys:
+            parent.show_warning("导入错误", f"配置文件缺少必要的配置项:\n{', '.join(missing_keys)}\n\n可能不是有效的配置文件。")
+            return None
+        
+        return config_data
+    except json.JSONDecodeError:
+        parent.show_warning("格式错误", "所选文件不是有效的JSON格式")
+    except Exception as e:
+        parent.show_error("导入错误", f"导入配置文件时发生错误:\n{str(e)}")
+    
+    return None

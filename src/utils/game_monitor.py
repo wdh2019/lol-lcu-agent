@@ -112,6 +112,7 @@ def main_loop(stop_check_func=None, print_func=None, config_dict=None):
             
             if not lcu_port and not lcu_token:
                 # 如果没有凭证，则尝试获取
+                print("正在获取LCU凭证...")
                 config_lcu_port = config_dict.get("LCU_PORT", LCU_PORT)
                 config_lcu_token = config_dict.get("LCU_TOKEN", LCU_TOKEN)
                 lcu_port, lcu_token = get_lcu_credentials(config_lcu_port, config_lcu_token)

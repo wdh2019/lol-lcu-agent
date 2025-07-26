@@ -20,10 +20,15 @@ from .settings_tab import SettingsTab
 class MainWindow(QMainWindow):
     """主窗口类"""
     
-    def __init__(self):
+    def __init__(self, log_manager=None):
         super().__init__()
         self.setWindowTitle("英雄联盟游戏数据采集工具")
         self.setMinimumSize(800, 600)
+        
+        # 设置日志管理器
+        self.log_manager = log_manager
+        if self.log_manager:
+            self.log_manager.info("主窗口初始化")
         
         # 创建中央部件和主布局
         self.central_widget = QWidget()
@@ -64,11 +69,21 @@ class MainWindow(QMainWindow):
         self.statusBar().showMessage("就绪")
 
 # 主函数
-def main():
-    """应用程序入口函数"""
+def main(log_manager=None):
+    """
+    应用程序入口函数
+    
+    参数:
+        log_manager: 日志管理器实例
+    """
     app = QApplication(sys.argv)
-    window = MainWindow()
+    window = MainWindow(log_manager)
     window.show()
+    
+    # 记录应用程序启动完成
+    if log_manager:
+        log_manager.info("图形界面已启动")
+    
     sys.exit(app.exec_())
 
 if __name__ == "__main__":

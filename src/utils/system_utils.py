@@ -2,15 +2,20 @@ import subprocess
 import os
 from datetime import datetime
 
-def list_running_processes(save_to_file=True):
+def list_running_processes(log_manager=None, save_to_file=True):
     """
     列出当前系统中正在运行的进程
     
     参数:
+        log_manager: 日志管理器，如果提供则记录日志
         save_to_file: 是否将进程列表保存到文件中
     """
     try:
-        print("\n正在获取系统中运行的进程列表...")
+        log_msg = "\n正在获取系统中运行的进程列表..."
+        print(log_msg)
+        if log_manager:
+            log_manager.info(log_msg)
+            
         command = "wmic process get name,processid"
         output = subprocess.check_output(command, shell=True, text=True)
         
@@ -30,6 +35,8 @@ def list_running_processes(save_to_file=True):
             # 打印表头
             print(f"\n{header_line}")
             print(divider_line)
+            if log_manager:
+                log_manager.debug(f"进程列表:\n{header_line}\n{divider_line}")
             
             # 处理并显示每一行
             for line in lines[1:]:  # 跳过表头行
@@ -42,11 +49,18 @@ def list_running_processes(save_to_file=True):
                     formatted_line = f"{name:<40} {pid:<10}"
                     print(formatted_line)
                     process_list_content.append(formatted_line)
+                    
+                    # 特别记录英雄联盟客户端进程
+                    if "LeagueClient" in name or "League of Legends" in name:
+                        if log_manager:
+                            log_manager.info(f"找到游戏相关进程: {name} (PID: {pid})")
             
             total_processes = len(lines) - 1
             summary_line = f"\n总共找到 {total_processes} 个进程"
             print(summary_line)
             process_list_content.append(summary_line)
+            if log_manager:
+                log_manager.info(summary_line)
             
             # 保存到文件
             if save_to_file:
@@ -62,11 +76,23 @@ def list_running_processes(save_to_file=True):
                 with open(file_path, "w", encoding="utf-8") as f:
                     f.write("\n".join(process_list_content))
                 
-                print(f"\n进程列表已保存到: {file_path}")
+                log_msg = f"\n进程列表已保存到: {file_path}"
+                print(log_msg)
+                if log_manager:
+                    log_manager.info(log_msg)
         else:
-            print("未找到任何进程信息")
+            log_msg = "未找到任何进程信息"
+            print(log_msg)
+            if log_manager:
+                log_manager.warning(log_msg)
             
     except subprocess.SubprocessError as e:
-        print(f"获取进程列表时出错 (SubprocessError): {e}")
+        error_msg = f"获取进程列表时出错 (SubprocessError): {e}"
+        print(error_msg)
+        if log_manager:
+            log_manager.error(error_msg)
     except Exception as e:
-        print(f"获取进程列表时出错: {e}")
+        error_msg = f"获取进程列表时出错: {e}"
+        print(error_msg)
+        if log_manager:
+            log_manager.error(error_msg)

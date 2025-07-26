@@ -10,8 +10,8 @@ cd ..
 echo Using absolute paths...
 echo Current directory: %cd%
 
-echo Generating the executable using PyInstaller...
-python -m PyInstaller --clean --onefile --windowed --name LoLDataCollector --icon=%cd%\resources\icon.ico %cd%\main.py
+echo Generating the executable using PyInstaller with admin privileges...
+python -m PyInstaller --clean --onefile --windowed --name LoLDataCollector --icon=%cd%\resources\icon.ico --manifest=%cd%\uac_admin.manifest %cd%\main.py
 
 echo.
 if %errorlevel% equ 0 (
