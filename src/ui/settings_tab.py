@@ -160,6 +160,12 @@ class SettingsTab(BaseTab):
         view_current_log_btn.clicked.connect(self.view_current_log_file)
         view_current_log_btn.setToolTip("查看当前应用程序的日志文件内容")
         
+        # 添加查看历史日志按钮
+        view_history_log_btn = QPushButton("查看历史日志")
+        view_history_log_btn.setIcon(self.style().standardIcon(self.style().SP_FileDialogListView))
+        view_history_log_btn.clicked.connect(self.view_history_logs)
+        view_history_log_btn.setToolTip("查看历史日志文件列表")
+        
         # 添加清空日志按钮
         clear_logs_btn = QPushButton("清空所有日志")
         clear_logs_btn.setIcon(self.style().standardIcon(self.style().SP_TrashIcon))
@@ -170,6 +176,7 @@ class SettingsTab(BaseTab):
         # 创建按钮布局
         log_buttons_layout = QHBoxLayout()
         log_buttons_layout.addWidget(view_current_log_btn)
+        log_buttons_layout.addWidget(view_history_log_btn)
         log_buttons_layout.addWidget(clear_logs_btn)
         
         log_config_form.addRow("", log_buttons_layout)
@@ -286,7 +293,7 @@ class SettingsTab(BaseTab):
             # 检查是否与当前配置不同
             if config_dir != self.config_manager.current_config.get("CONFIG_DIR", ""):
                 # 添加提示对话框，告知用户需要重启应用
-                restart_needed = self.show_confirm(
+                restart_needed = self.show_question(
                     "配置路径已更改",
                     "您修改了配置文件目录，新的配置将在应用程序重启后生效。\n\n"
                     f"新的配置文件将保存在：{config_file}\n\n"
@@ -318,7 +325,7 @@ class SettingsTab(BaseTab):
             if "APP_LOG_DIR" in new_config and new_config["APP_LOG_DIR"]:
                 create_directory_if_not_exists(new_config["APP_LOG_DIR"])
             
-            # 刷新日志管理标签页的游戏列表
+            # 刷新游戏数据管理标签页的游戏列表
             if self.main_window and hasattr(self.main_window, 'logs_tab'):
                 self.main_window.logs_tab.refresh_game_list()
                 
@@ -331,7 +338,7 @@ class SettingsTab(BaseTab):
     
     def reset_settings(self):
         """重置设置为默认值（从config.py中读取的原始值）"""
-        if self.show_confirm("确认重置", "确定要重置所有设置到默认值吗？"):
+        if self.show_question("确认重置", "确定要重置所有设置到默认值吗？"):
             # 重新加载原始配置
             original_config = self.config_manager.original_config
             
@@ -354,7 +361,7 @@ class SettingsTab(BaseTab):
             
     def delete_user_config(self):
         """删除用户配置文件，完全重置为默认配置"""
-        if self.show_confirm("确认删除", "确定要删除用户配置文件，并重置为系统默认配置吗？\n\n这将删除您所有的自定义设置。"):
+        if self.show_question("确认删除", "确定要删除用户配置文件，并重置为系统默认配置吗？\n\n这将删除您所有的自定义设置。"):
             try:
                 # 删除配置文件
                 if os.path.exists(self.config_manager.config_file):
@@ -396,7 +403,7 @@ class SettingsTab(BaseTab):
         
         if imported_config:
             # 确认是否应用导入的配置
-            confirm = self.show_confirm(
+            confirm = self.show_question(
                 "确认导入", 
                 "是否应用导入的配置？\n\n"
                 "这将更新界面上的所有设置，但不会立即保存。\n"
@@ -453,16 +460,11 @@ class SettingsTab(BaseTab):
     def view_current_log_file(self):
         """查看当前日志文件内容"""
         try:
-            # 获取日志管理器
-            log_manager = None
-            if self.main_window and hasattr(self.main_window, 'log_manager'):
-                log_manager = self.main_window.log_manager
+            # 使用单例日志管理器
+            from ..utils.log_manager import get_logger
+            log_manager = get_logger()
             
-            # 如果没有日志管理器或无法获取日志文件路径
-            if not log_manager or not hasattr(log_manager, 'get_log_filepath'):
-                self.show_error("错误", "无法获取当前日志文件路径")
-                return
-                
+            # 获取日志文件路径
             log_file = log_manager.get_log_filepath()
             
             # 检查日志文件是否存在
@@ -483,11 +485,41 @@ class SettingsTab(BaseTab):
         except Exception as e:
             self.show_error("错误", f"打开日志文件时出错: {str(e)}")
             self.log_error(f"打开日志文件时出错: {str(e)}")
+            
+    def view_history_logs(self):
+        """查看历史日志文件列表"""
+        try:
+            # 获取日志目录
+            log_dir = self.app_log_dir.text() if self.app_log_dir.text() else self.config_manager.current_config.get("APP_LOG_DIR", "")
+            
+            # 如果日志目录为空，则使用默认日志目录
+            if not log_dir:
+                documents_dir = os.path.join(os.path.expanduser("~"), "Documents")
+                log_dir = os.path.join(documents_dir, "LoL-Data-Collector", "app_logs")
+            
+            # 确保日志目录存在
+            if not os.path.exists(log_dir):
+                self.show_message("历史日志", "日志目录不存在。")
+                return
+                
+            # 获取所有日志文件
+            log_files = [f for f in os.listdir(log_dir) if f.endswith('.log')]
+            
+            if not log_files:
+                self.show_message("历史日志", "没有找到日志文件。")
+                return
+                
+            # 打开日志目录
+            self.open_directory(log_dir)
+            
+        except Exception as e:
+            self.show_error("错误", f"查看历史日志文件时出错: {str(e)}")
+            self.log_error(f"查看历史日志文件时出错: {str(e)}")
     
     def clear_log_files(self):
         """清空日志文件"""
         try:
-            confirm = self.show_confirm(
+            confirm = self.show_question(
                 "确认清空", 
                 "确定要清空所有日志文件吗？\n\n"
                 "这将删除应用程序的所有日志文件，此操作无法撤销。"
@@ -515,23 +547,40 @@ class SettingsTab(BaseTab):
             if not log_files:
                 self.show_message("清空完成", "没有找到日志文件。")
                 return
+            
+            # 使用单例日志管理器，先关闭所有处理器
+            from ..utils.log_manager import get_logger
+            log_manager = get_logger()
+            log_manager.close_handlers()
+                
+            # 短暂等待文件释放
+            import time
+            time.sleep(0.1)
                 
             # 删除所有日志文件
+            failed_files = []
             for log_file in log_files:
                 file_path = os.path.join(log_dir, log_file)
                 try:
                     os.remove(file_path)
                 except Exception as e:
+                    failed_files.append(file_path)
                     self.log_error(f"删除日志文件失败: {file_path}, 错误: {str(e)}")
             
-            # 如果当前有日志管理器，重新初始化日志文件
-            if self.main_window and hasattr(self.main_window, 'log_manager'):
-                log_manager = self.main_window.log_manager
-                # 记录清空日志的操作
-                log_manager.info("用户已清空所有日志文件")
+            # 重新初始化日志文件
+            log_manager.init_handlers()
+            # 记录清空日志的操作
+            log_manager.info("用户已清空所有日志文件")
                 
-            self.show_message("清空完成", f"已删除 {len(log_files)} 个日志文件。")
-            self.log_info(f"已清空所有日志文件，共 {len(log_files)} 个")
+            # 显示结果消息
+            if failed_files:
+                self.show_message("清空部分完成", 
+                               f"已删除 {len(log_files) - len(failed_files)} 个日志文件。\n"
+                               f"{len(failed_files)} 个文件无法删除，可能仍在使用中。")
+            else:
+                self.show_message("清空完成", f"已删除 {len(log_files)} 个日志文件。")
+            
+            self.log_info(f"已清空日志文件，共 {len(log_files) - len(failed_files)} 个")
             
             # 更新日志空间使用信息
             self.update_log_space_info()

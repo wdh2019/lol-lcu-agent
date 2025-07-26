@@ -22,7 +22,7 @@ def initialize_logging():
         }
         log_level = log_level_map.get(APP_LOG_LEVEL, logging.INFO)
         
-        # 创建日志管理器实例
+        # 创建日志管理器实例（单例）
         log_manager = LogManager(log_dir=APP_LOG_DIR, log_level=log_level)
         
         # 设置全局异常钩子，捕获未处理的异常
@@ -33,11 +33,10 @@ def initialize_logging():
         log_manager.info(f"Python版本: {sys.version}")
         log_manager.info(f"工作目录: {os.getcwd()}")
         
-        return log_manager
+        return True
     except Exception as e:
         print(f"初始化日志系统失败: {str(e)}")
-        # 如果日志系统初始化失败，返回None
-        return None
+        return False
 
 def show_help():
     """显示帮助信息"""
@@ -48,7 +47,7 @@ def show_help():
 
 if __name__ == "__main__":
     # 初始化日志系统
-    log_manager = initialize_logging()
+    log_initialized = initialize_logging()
     
     # 检查命令行参数
     if len(sys.argv) > 1:
@@ -60,19 +59,23 @@ if __name__ == "__main__":
     else:
         # 默认启动UI界面
         try:
-            if log_manager:
+            if log_initialized:
+                from src.utils.log_manager import get_logger
+                log_manager = get_logger()
                 log_manager.info("正在启动图形界面...")
             print("正在启动图形界面...")
             
             from src.ui.main_window import main as run_ui
-            run_ui(log_manager)
+            run_ui()
         except ImportError as e:
             error_message = f"启动图形界面失败: {e}\n请确保已安装PyQt5: pip install PyQt5"
             print(error_message)
-            if log_manager:
-                log_manager.error(error_message)
+            if log_initialized:
+                from src.utils.log_manager import get_logger
+                get_logger().error(error_message)
         except Exception as e:
             error_message = f"启动过程中发生错误: {str(e)}"
             print(error_message)
-            if log_manager:
-                log_manager.error(error_message, exc_info=True)
+            if log_initialized:
+                from src.utils.log_manager import get_logger
+                get_logger().error(error_message, exc_info=True)

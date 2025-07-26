@@ -5,6 +5,9 @@ UI组件基类
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QMessageBox
 from PyQt5.QtCore import Qt
 
+# 导入单例日志管理器
+from ..utils.log_manager import get_logger
+
 class BaseTab(QWidget):
     """标签页基类"""
     
@@ -19,8 +22,8 @@ class BaseTab(QWidget):
         self.main_window = parent
         self.config_manager = parent.config_manager if parent else None
         
-        # 获取日志管理器
-        self.log_manager = parent.log_manager if parent else None
+        # 使用单例日志管理器，无需通过参数传递
+        self.log_manager = get_logger()
         
         self.init_ui()
         
@@ -36,57 +39,47 @@ class BaseTab(QWidget):
     
     def show_message(self, title, message):
         """显示消息对话框"""
-        if self.log_manager:
-            self.log_manager.info(f"消息对话框: {title} - {message}")
+        self.log_manager.info(f"消息对话框: {title} - {message}")
         QMessageBox.information(self, title, message)
         
     def show_error(self, title, message):
         """显示错误对话框"""
-        if self.log_manager:
-            self.log_manager.error(f"错误对话框: {title} - {message}")
+        self.log_manager.error(f"错误对话框: {title} - {message}")
         QMessageBox.critical(self, title, message)
         
     def show_warning(self, title, message):
         """显示警告对话框"""
-        if self.log_manager:
-            self.log_manager.warning(f"警告对话框: {title} - {message}")
+        self.log_manager.warning(f"警告对话框: {title} - {message}")
         QMessageBox.warning(self, title, message)
         
-    def show_confirm(self, title, message):
+    def show_question(self, title, message):
         """显示确认对话框"""
-        if self.log_manager:
-            self.log_manager.info(f"确认对话框: {title} - {message}")
-        result = QMessageBox.question(
-            self, title, message, 
-            QMessageBox.Yes | QMessageBox.No
-        ) == QMessageBox.Yes
-        if self.log_manager:
-            self.log_manager.info(f"确认对话框结果: {'是' if result else '否'}")
+        self.log_manager.info(f"确认对话框: {title} - {message}")
+        reply = QMessageBox.question(self, title, message, 
+                                    QMessageBox.Yes | QMessageBox.No,
+                                    QMessageBox.No)
+        result = reply == QMessageBox.Yes
+        self.log_manager.info(f"确认对话框结果: {'是' if result else '否'}")
         return result
-    
+        
     def update_status(self, message):
         """更新状态栏消息"""
-        if self.main_window:
+        if hasattr(self.main_window, 'statusBar'):
             self.main_window.statusBar().showMessage(message)
-        if self.log_manager:
-            self.log_manager.debug(f"状态栏: {message}")
-            
+        self.log_manager.debug(f"状态栏: {message}")
+        
     def log_info(self, message):
-        """记录信息级别日志"""
-        if self.log_manager:
-            self.log_manager.info(message)
-            
+        """记录信息日志"""
+        self.log_manager.info(message)
+        
     def log_error(self, message):
-        """记录错误级别日志"""
-        if self.log_manager:
-            self.log_manager.error(message)
-            
+        """记录错误日志"""
+        self.log_manager.error(message)
+        
     def log_warning(self, message):
-        """记录警告级别日志"""
-        if self.log_manager:
-            self.log_manager.warning(message)
-            
+        """记录警告日志"""
+        self.log_manager.warning(message)
+        
     def log_debug(self, message):
-        """记录调试级别日志"""
-        if self.log_manager:
-            self.log_manager.debug(message)
+        """记录调试日志"""
+        self.log_manager.debug(message)

@@ -12,6 +12,9 @@ from PyQt5.QtGui import QFont
 from src.utils.config_manager import ConfigManager
 import src.config as config_module
 
+# 导入单例日志管理器
+from ..utils.log_manager import get_logger
+
 # 导入标签页模块
 from .monitor_tab import MonitorTab
 from .logs_tab import LogsTab
@@ -20,15 +23,14 @@ from .settings_tab import SettingsTab
 class MainWindow(QMainWindow):
     """主窗口类"""
     
-    def __init__(self, log_manager=None):
+    def __init__(self):
         super().__init__()
         self.setWindowTitle("英雄联盟游戏数据采集工具")
         self.setMinimumSize(800, 600)
         
-        # 设置日志管理器
-        self.log_manager = log_manager
-        if self.log_manager:
-            self.log_manager.info("主窗口初始化")
+        # 使用单例日志管理器
+        self.log_manager = get_logger()
+        self.log_manager.info("主窗口初始化")
         
         # 创建中央部件和主布局
         self.central_widget = QWidget()
@@ -62,27 +64,22 @@ class MainWindow(QMainWindow):
         self.settings_tab = SettingsTab(self)
         
         self.tab_widget.addTab(self.monitor_tab, "游戏监控")
-        self.tab_widget.addTab(self.logs_tab, "日志管理")
+        self.tab_widget.addTab(self.logs_tab, "游戏数据管理")
         self.tab_widget.addTab(self.settings_tab, "设置")
         
         # 使用状态栏
         self.statusBar().showMessage("就绪")
 
 # 主函数
-def main(log_manager=None):
-    """
-    应用程序入口函数
-    
-    参数:
-        log_manager: 日志管理器实例
-    """
+def main():
+    """应用程序入口函数"""
     app = QApplication(sys.argv)
-    window = MainWindow(log_manager)
+    window = MainWindow()
     window.show()
     
     # 记录应用程序启动完成
-    if log_manager:
-        log_manager.info("图形界面已启动")
+    log_manager = get_logger()
+    log_manager.info("图形界面已启动")
     
     sys.exit(app.exec_())
 

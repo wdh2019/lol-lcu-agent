@@ -1,5 +1,5 @@
 """
-日志管理标签页
+游戏数据管理标签页
 """
 import os
 import datetime
@@ -12,13 +12,13 @@ from .base_tab import BaseTab
 from .ui_utils import format_file_size, view_json_content, export_file, export_files_to_zip
 
 class LogsTab(BaseTab):
-    """日志管理标签页"""
+    """游戏数据管理标签页"""
     
     def init_ui(self):
         """初始化标签页界面"""
         layout = QVBoxLayout(self)
         
-        # 日志选择器
+        # 数据文件选择器
         selector_layout = QHBoxLayout()
         selector_label = QLabel("选择游戏:")
         self.game_selector = QComboBox()
@@ -29,8 +29,8 @@ class LogsTab(BaseTab):
         selector_layout.addWidget(self.refresh_button)
         layout.addLayout(selector_layout)
         
-        # 日志文件列表
-        layout.addWidget(QLabel("日志文件列表:"))
+        # 数据文件列表
+        layout.addWidget(QLabel("数据文件列表:"))
         self.log_table = QTableWidget()
         self.log_table.setColumnCount(3)
         self.log_table.setHorizontalHeaderLabels(["文件名", "大小", "时间"])
@@ -48,11 +48,11 @@ class LogsTab(BaseTab):
         self.upload_button = QPushButton("上传选中文件")
         self.view_button = QPushButton("查看文件内容")
         self.export_button = QPushButton("导出文件")
-        self.export_all_button = QPushButton("导出对局日志为压缩包")
+        self.export_all_button = QPushButton("导出当前对局数据为压缩包")
         
         # 创建第二行按钮布局
         button_layout2 = QHBoxLayout()
-        self.export_all_logs_button = QPushButton("导出所有日志为压缩包")
+        self.export_all_logs_button = QPushButton("导出所有对局数据为压缩包")
         button_layout2.addWidget(self.export_all_logs_button)
         
         # 按钮点击事件
@@ -62,7 +62,7 @@ class LogsTab(BaseTab):
         self.export_all_button.clicked.connect(self.export_all_log_files)
         self.export_all_logs_button.clicked.connect(self.export_all_logs)
         
-        # 初始状态下禁用按钮，需要选择日志文件后才启用
+        # 初始状态下禁用按钮，需要选择某个对局数据文件后才启用
         self.upload_button.setEnabled(False)
         self.view_button.setEnabled(False)
         self.export_button.setEnabled(False)
@@ -131,7 +131,7 @@ class LogsTab(BaseTab):
         else:
             self.export_all_button.setEnabled(True)  # 启用导出全部按钮
         
-        # 清空日志文件表格
+        # 清空数据文件表格
         self.log_table.setRowCount(0)
         
         # 获取选中的游戏文件夹
@@ -139,17 +139,17 @@ class LogsTab(BaseTab):
         if folder is None:
             return
         
-        self.update_status(f"正在加载游戏 {folder} 的日志文件...")
+        self.update_status(f"正在加载游戏 {folder} 的数据文件...")
         
-        # 查找该游戏的所有日志文件
+        # 查找该游戏的所有数据文件
         log_files = []
         
-        # 获取当前配置中的日志目录
+        # 获取当前配置中的游戏数据文件目录
         current_config = self.config_manager.current_config
         live_dir = current_config.get("LOG_DIR_BASE_LIVE", "game_logs_live")
         postgame_dir = current_config.get("LOG_DIR_BASE_POSTGAME", "game_logs_postgame")
         
-        # 检查实时数据日志
+        # 检查实时数据文件（live）
         live_path = os.path.join(live_dir, folder)
         if os.path.exists(live_path):
             for file in os.listdir(live_path):
@@ -165,7 +165,7 @@ class LogsTab(BaseTab):
                         'type': 'live'
                     })
         
-        # 检查赛后数据日志
+        # 检查赛后数据文件（postgame）
         postgame_path = os.path.join(postgame_dir, folder)
         if os.path.exists(postgame_path):
             for file in os.listdir(postgame_path):
@@ -205,10 +205,10 @@ class LogsTab(BaseTab):
             # 存储完整路径到第一列的数据中
             self.log_table.item(row_position, 0).setData(Qt.UserRole, log_file['path'])
         
-        self.update_status(f"已加载 {len(log_files)} 个日志文件")
+        self.update_status(f"已加载 {len(log_files)} 数据文件")
     
     def on_log_selection_changed(self):
-        """当日志文件选择变化时触发"""
+        """当数据文件选择变化时触发"""
         selected_items = self.log_table.selectedItems()
         has_selection = len(selected_items) > 0
         
@@ -217,7 +217,7 @@ class LogsTab(BaseTab):
         self.export_button.setEnabled(has_selection)
     
     def get_selected_log_path(self):
-        """获取当前选中的日志文件路径"""
+        """获取当前选中的数据文件路径"""
         selected_rows = self.log_table.selectionModel().selectedRows()
         if not selected_rows:
             selected_items = self.log_table.selectedItems()
@@ -231,10 +231,10 @@ class LogsTab(BaseTab):
         return self.log_table.item(selected_row, 0).data(Qt.UserRole)
     
     def upload_selected_log(self):
-        """上传选中的日志文件"""
+        """上传选中的数据文件"""
         log_path = self.get_selected_log_path()
         if not log_path:
-            self.show_warning("上传错误", "请先选择一个日志文件")
+            self.show_warning("上传错误", "请先选择一个数据文件")
             return
         
         try:
@@ -251,34 +251,34 @@ class LogsTab(BaseTab):
             
             if success:
                 self.show_message("上传成功", f"文件已成功上传\n\n服务器响应: {response}")
-                self.update_status("日志文件上传成功")
+                self.update_status("数据文件上传成功")
             else:
                 self.show_warning("上传失败", f"上传过程中出错:\n{response}")
-                self.update_status("日志文件上传失败")
+                self.update_status("数据文件上传失败")
         except Exception as e:
             self.show_error("上传错误", f"上传过程中发生异常:\n{str(e)}")
             self.update_status(f"上传出错: {str(e)}")
             
     def view_log_content(self):
-        """查看日志文件内容"""
+        """查看数据文件内容"""
         log_path = self.get_selected_log_path()
         if not log_path:
-            self.show_warning("查看错误", "请先选择一个日志文件")
+            self.show_warning("查看错误", "请先选择一个数据文件")
             return
         
         view_json_content(self, log_path)
     
     def export_log_file(self):
-        """导出日志文件到指定位置"""
+        """导出数据文件到指定位置"""
         log_path = self.get_selected_log_path()
         if not log_path:
-            self.show_warning("导出错误", "请先选择一个日志文件")
+            self.show_warning("导出错误", "请先选择一个数据文件")
             return
         
         export_file(self, log_path)
         
     def export_all_log_files(self):
-        """导出当前对局的所有日志文件为一个zip压缩包"""
+        """导出当前对局的所有数据文件为一个zip压缩包"""
         # 获取当前选择的游戏文件夹
         current_index = self.game_selector.currentIndex()
         if current_index < 0:
@@ -290,7 +290,7 @@ class LogsTab(BaseTab):
             self.show_warning("导出错误", "无效的对局选择")
             return
         
-        # 获取当前配置中的日志目录
+        # 获取当前配置中的数据文件目录
         current_config = self.config_manager.current_config
         live_dir = current_config.get("LOG_DIR_BASE_LIVE", "game_logs_live")
         postgame_dir = current_config.get("LOG_DIR_BASE_POSTGAME", "game_logs_postgame")
@@ -298,7 +298,7 @@ class LogsTab(BaseTab):
         # 需要打包的文件列表
         files_to_zip = []
         
-        # 检查实时数据日志
+        # 检查实时数据文件（live）
         live_path = os.path.join(live_dir, folder)
         if os.path.exists(live_path):
             for file in os.listdir(live_path):
@@ -308,7 +308,7 @@ class LogsTab(BaseTab):
                         'archive_name': f"live/{file}"  # 在zip内的相对路径
                     })
         
-        # 检查赛后数据日志
+        # 检查赛后数据文件（postgame）
         postgame_path = os.path.join(postgame_dir, folder)
         if os.path.exists(postgame_path):
             for file in os.listdir(postgame_path):
@@ -323,10 +323,10 @@ class LogsTab(BaseTab):
         export_files_to_zip(self, files_to_zip, default_name=default_name)
     
     def export_all_logs(self):
-        """导出所有日志目录下的所有日志文件为一个压缩包"""
-        self.update_status("准备导出所有日志文件...")
+        """导出所有游戏数据文件目录下的所有文件为一个压缩包"""
+        self.update_status("准备导出所有文件...")
         
-        # 获取当前配置中的日志目录
+        # 获取当前配置中的数据文件目录
         current_config = self.config_manager.current_config
         live_dir = current_config.get("LOG_DIR_BASE_LIVE", "game_logs_live")
         postgame_dir = current_config.get("LOG_DIR_BASE_POSTGAME", "game_logs_postgame")
@@ -338,7 +338,7 @@ class LogsTab(BaseTab):
         # 需要打包的文件列表
         files_to_zip = []
         
-        # 遍历实时数据日志目录下的所有文件
+        # 遍历实时数据文件目录下的所有文件
         if os.path.exists(live_dir):
             for game_folder in os.listdir(live_dir):
                 game_folder_path = os.path.join(live_dir, game_folder)
@@ -352,7 +352,7 @@ class LogsTab(BaseTab):
                                 'archive_name': archive_name
                             })
         
-        # 遍历赛后数据日志目录下的所有文件
+        # 遍历赛后数据文件目录下的所有文件
         if os.path.exists(postgame_dir):
             for game_folder in os.listdir(postgame_dir):
                 game_folder_path = os.path.join(postgame_dir, game_folder)
@@ -367,16 +367,16 @@ class LogsTab(BaseTab):
                             })
         
         if not files_to_zip:
-            self.show_warning("导出错误", "未找到任何日志文件")
+            self.show_warning("导出错误", "未找到任何数据文件")
             return
             
-        self.update_status(f"正在准备导出 {len(files_to_zip)} 个日志文件...")
+        self.update_status(f"正在准备导出 {len(files_to_zip)} 个数据文件...")
         
         # 由于文件数量可能很多，先提示用户
         if len(files_to_zip) > 100:  # 如果文件数量超过100个，提示用户
-            confirm = self.show_confirm(
+            confirm = self.show_question(
                 "导出确认", 
-                f"将要导出 {len(files_to_zip)} 个日志文件，可能需要一些时间。是否继续？"
+                f"将要导出 {len(files_to_zip)} 个数据文件，可能需要一些时间。是否继续？"
             )
             if not confirm:
                 self.update_status("导出操作已取消")

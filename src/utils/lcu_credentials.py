@@ -3,8 +3,9 @@ import re
 import requests
 import os
 from .system_utils import list_running_processes
+from .log_manager import get_logger
 
-def get_lcu_credentials(lcu_port="", lcu_token="", log_manager=None):
+def get_lcu_credentials(lcu_port="", lcu_token=""):
     """
     通过Windows命令行获取LCU API的端口和认证Token。
     这是与客户端交互的关键。
@@ -12,11 +13,12 @@ def get_lcu_credentials(lcu_port="", lcu_token="", log_manager=None):
     参数:
         lcu_port: 预设的LCU端口，如果动态获取失败将使用此值
         lcu_token: 预设的LCU令牌，如果动态获取失败将使用此值
-        log_manager: 日志管理器，如果提供则记录日志
         
     返回:
         tuple: (port, token) - 成功返回端口和认证令牌，失败返回(None, None)
     """
+    # 使用单例日志管理器
+    log_manager = get_logger()
     try:
         # 首先尝试通过命令行动态获取
         log_msg = "尝试通过命令行动态获取LCU凭证..."

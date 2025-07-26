@@ -25,7 +25,7 @@
     - `base_tab.py`: 标签页基类，包含共用的 UI 方法
     - `ui_utils.py`: UI 通用工具函数
     - `monitor_tab.py`: 游戏监控标签页实现
-    - `logs_tab.py`: 日志管理标签页实现
+    - `logs_tab.py`: 游戏数据管理标签页实现
     - `settings_tab.py`: 设置标签页实现
   - `test/`: 测试目录
     - `__init__.py`: 包初始化文件
