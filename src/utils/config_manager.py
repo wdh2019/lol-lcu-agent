@@ -114,10 +114,9 @@ class ConfigManager:
         
         # 添加配置项分组
         sections = {
-            '# --- Live Client Data API 配置 ---': ['LIVE_DATA_URL', 'LCU_EOG_ENDPOINT', 'LCU_PORT', 'LCU_TOKEN'],
+            '# --- Live Client Data API 配置 ---': ['LIVE_DATA_URL', 'UPLOAD_API_URL', 'LCU_EOG_ENDPOINT', 'LCU_PORT', 'LCU_TOKEN'],
             '# --- 日志目录配置 ---': ['LOG_DIR_BASE_LIVE', 'LOG_DIR_BASE_POSTGAME'],
             '# --- 轮询配置 ---': ['POLL_INTERVAL', 'MAX_EOG_WAIT_TIME'],
-            '# --- 日志上传配置 ---': ['UPLOAD_LOGS', 'LOG_SERVER_URL']
         }
         
         # 写入各个配置项，按分组
@@ -135,8 +134,6 @@ class ConfigManager:
                         config_content[-1] += '  # 减小轮询间隔，提高响应速度'
                     elif key == 'MAX_EOG_WAIT_TIME':
                         config_content[-1] += '  # 等待2分钟'
-                    elif key == 'UPLOAD_LOGS':
-                        config_content[-1] += '  # 是否自动上传日志'
                     elif key == 'LOG_SERVER_URL':
                         config_content[-1] += '  # 日志上传服务器URL'
             

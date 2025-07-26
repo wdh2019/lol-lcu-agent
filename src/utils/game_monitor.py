@@ -6,15 +6,15 @@ from .data_handler import DataHandler
 from .system_utils import list_running_processes
 from src.config import (  # 明确导入需要的配置项
     LIVE_DATA_URL,
+    UPLOAD_API_URL,
+    AUTO_UPLOAD_POSTGAME_DATA,
     LCU_EOG_ENDPOINT,
     POLL_INTERVAL,
     MAX_EOG_WAIT_TIME,
     LOG_DIR_BASE_LIVE,
     LOG_DIR_BASE_POSTGAME,
     LCU_PORT,
-    LCU_TOKEN,
-    UPLOAD_LOGS,
-    LOG_SERVER_URL
+    LCU_TOKEN
 )
 
 # 禁用SSL警告
@@ -158,12 +158,12 @@ def main_loop(stop_check_func=None, print_func=None, config_dict=None):
                     data_handler.save_data_to_json(data_or_error, 'postgame')
                     log(f"成功抓取赛后数据！")
                     
-                    # 如果配置了自动上传，则上传本局游戏的所有日志
-                    if UPLOAD_LOGS:
+                    # 如果配置了自动上传，则上传本局的赛后游戏数据
+                    if AUTO_UPLOAD_POSTGAME_DATA:
                         log("开始上传本局游戏的日志文件...")
                         success_count, failed_count = data_handler.upload_game_logs(
-                            log_type='both', 
-                            server_url=LOG_SERVER_URL
+                            log_type='postgame', 
+                            server_url=UPLOAD_API_URL,
                         )
                         if success_count > 0:
                             log(f"成功上传 {success_count} 个日志文件")

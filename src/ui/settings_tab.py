@@ -28,12 +28,12 @@ class SettingsTab(BaseTab):
         lcu_form = QFormLayout()
         lcu_group.setLayout(lcu_form)
         
-        self.live_data_url = QLineEdit(config.get("LIVE_DATA_URL", ""))
+        self.upload_api_url = QLineEdit(config.get("UPLOAD_API_URL", ""))
         self.lcu_eog_endpoint = QLineEdit(config.get("LCU_EOG_ENDPOINT", ""))
         self.lcu_port = QLineEdit(config.get("LCU_PORT", ""))
         self.lcu_token = QLineEdit(config.get("LCU_TOKEN", ""))
         
-        lcu_form.addRow("游戏实时数据 URL:", self.live_data_url)
+        lcu_form.addRow("游戏数据上传接口:", self.upload_api_url)
         lcu_form.addRow("赛后数据端点:", self.lcu_eog_endpoint)
         lcu_form.addRow("LCU 端口:", self.lcu_port)
         lcu_form.addRow("LCU 令牌:", self.lcu_token)
@@ -93,42 +93,6 @@ class SettingsTab(BaseTab):
         
         poll_form.addRow("轮询间隔:", self.poll_interval)
         poll_form.addRow("赛后数据等待时间:", self.max_eog_wait_time)
-        
-        # --- 日志上传配置组 ---
-        upload_group = QGroupBox("日志上传配置")
-        upload_form = QFormLayout()
-        upload_group.setLayout(upload_form)
-        
-        self.upload_logs = QCheckBox("自动上传日志")
-        self.upload_logs.setChecked(config.get("UPLOAD_LOGS", True))
-        
-        self.log_server_url = QLineEdit(config.get("LOG_SERVER_URL", ""))
-        
-        upload_form.addRow("", self.upload_logs)
-        upload_form.addRow("上传服务器 URL:", self.log_server_url)
-        
-        # --- 应用程序配置组 ---
-        app_group = QGroupBox("应用程序配置")
-        app_form = QFormLayout()
-        app_group.setLayout(app_form)
-        
-        self.config_dir = QLineEdit(config.get("CONFIG_DIR", ""))
-        
-        # 添加浏览按钮
-        config_dir_layout = QHBoxLayout()
-        config_dir_layout.addWidget(self.config_dir)
-        browse_config_btn = QPushButton("浏览...")
-        browse_config_btn.clicked.connect(lambda: browse_directory(self, self.config_dir))
-        config_dir_layout.addWidget(browse_config_btn)
-        
-        # 添加打开文件夹按钮
-        open_config_dir_btn = QPushButton("打开文件夹")
-        open_config_dir_btn.setIcon(self.style().standardIcon(self.style().SP_DirOpenIcon))
-        open_config_dir_btn.clicked.connect(lambda: self.open_directory(self.config_dir.text()))
-        open_config_dir_btn.setToolTip("在文件资源管理器中打开此文件夹")
-        config_dir_layout.addWidget(open_config_dir_btn)
-        
-        app_form.addRow("配置文件目录:", config_dir_layout)
         
         # --- 应用日志配置组 ---
         log_config_group = QGroupBox("应用日志配置")
@@ -195,6 +159,29 @@ class SettingsTab(BaseTab):
         
         # 初始化日志空间信息
         self.update_log_space_info()
+
+        # --- 应用程序设置组 ---
+        setting_group = QGroupBox("应用程序设置")
+        app_form = QFormLayout()
+        setting_group.setLayout(app_form)
+        
+        self.config_dir = QLineEdit(config.get("CONFIG_DIR", ""))
+        
+        # 添加浏览按钮
+        config_dir_layout = QHBoxLayout()
+        config_dir_layout.addWidget(self.config_dir)
+        browse_config_btn = QPushButton("浏览...")
+        browse_config_btn.clicked.connect(lambda: browse_directory(self, self.config_dir))
+        config_dir_layout.addWidget(browse_config_btn)
+        
+        # 添加打开文件夹按钮
+        open_config_dir_btn = QPushButton("打开文件夹")
+        open_config_dir_btn.setIcon(self.style().standardIcon(self.style().SP_DirOpenIcon))
+        open_config_dir_btn.clicked.connect(lambda: self.open_directory(self.config_dir.text()))
+        open_config_dir_btn.setToolTip("在文件资源管理器中打开此文件夹")
+        config_dir_layout.addWidget(open_config_dir_btn)
+        
+        app_form.addRow("配置文件目录:", config_dir_layout)
         
         # 配置文件说明
         config_note = QLabel("注意: 修改配置文件目录后，需要重启应用程序才能生效。新的配置文件将在重启后创建。")
@@ -206,9 +193,8 @@ class SettingsTab(BaseTab):
         layout.addWidget(lcu_group)
         layout.addWidget(log_group)
         layout.addWidget(poll_group)
-        layout.addWidget(upload_group)
-        layout.addWidget(app_group)
         layout.addWidget(log_config_group)
+        layout.addWidget(setting_group)
 
         # 添加配置导入/导出按钮
         import_export_layout = QHBoxLayout()
@@ -271,7 +257,7 @@ class SettingsTab(BaseTab):
         """保存设置到配置文件"""
         # 收集当前设置
         new_config = {
-            "LIVE_DATA_URL": self.live_data_url.text(),
+            "UPLOAD_API_URL": self.upload_api_url.text(),
             "LCU_EOG_ENDPOINT": self.lcu_eog_endpoint.text(),
             "LCU_PORT": self.lcu_port.text(),
             "LCU_TOKEN": self.lcu_token.text(),
@@ -279,8 +265,6 @@ class SettingsTab(BaseTab):
             "LOG_DIR_BASE_POSTGAME": self.log_dir_postgame.text(),
             "POLL_INTERVAL": self.poll_interval.value(),
             "MAX_EOG_WAIT_TIME": self.max_eog_wait_time.value(),
-            "UPLOAD_LOGS": self.upload_logs.isChecked(),
-            "LOG_SERVER_URL": self.log_server_url.text(),
             "APP_LOG_DIR": self.app_log_dir.text(),
         }
         
@@ -343,7 +327,7 @@ class SettingsTab(BaseTab):
             original_config = self.config_manager.original_config
             
             # 更新界面
-            self.live_data_url.setText(original_config.get("LIVE_DATA_URL", ""))
+            self.upload_api_url.setText(original_config.get("UPLOAD_API_URL", ""))
             self.lcu_eog_endpoint.setText(original_config.get("LCU_EOG_ENDPOINT", ""))
             self.lcu_port.setText(original_config.get("LCU_PORT", ""))
             self.lcu_token.setText(original_config.get("LCU_TOKEN", ""))
@@ -351,8 +335,6 @@ class SettingsTab(BaseTab):
             self.log_dir_postgame.setText(original_config.get("LOG_DIR_BASE_POSTGAME", ""))
             self.poll_interval.setValue(original_config.get("POLL_INTERVAL", 5))
             self.max_eog_wait_time.setValue(original_config.get("MAX_EOG_WAIT_TIME", 120))
-            self.upload_logs.setChecked(original_config.get("UPLOAD_LOGS", True))
-            self.log_server_url.setText(original_config.get("LOG_SERVER_URL", ""))
             self.config_dir.setText(original_config.get("CONFIG_DIR", ""))
             
             # 更新应用日志配置
@@ -412,8 +394,8 @@ class SettingsTab(BaseTab):
             
             if confirm:
                 # 更新界面上的设置
-                if "LIVE_DATA_URL" in imported_config:
-                    self.live_data_url.setText(imported_config.get("LIVE_DATA_URL", ""))
+                if "UPLOAD_API_URL" in imported_config:
+                    self.upload_api_url.setText(imported_config.get("UPLOAD_API_URL", ""))
                 if "LCU_EOG_ENDPOINT" in imported_config:
                     self.lcu_eog_endpoint.setText(imported_config.get("LCU_EOG_ENDPOINT", ""))
                 if "LCU_PORT" in imported_config:
@@ -428,10 +410,6 @@ class SettingsTab(BaseTab):
                     self.poll_interval.setValue(imported_config.get("POLL_INTERVAL", 5))
                 if "MAX_EOG_WAIT_TIME" in imported_config:
                     self.max_eog_wait_time.setValue(imported_config.get("MAX_EOG_WAIT_TIME", 120))
-                if "UPLOAD_LOGS" in imported_config:
-                    self.upload_logs.setChecked(imported_config.get("UPLOAD_LOGS", True))
-                if "LOG_SERVER_URL" in imported_config:
-                    self.log_server_url.setText(imported_config.get("LOG_SERVER_URL", ""))
                 if "CONFIG_DIR" in imported_config:
                     self.config_dir.setText(imported_config.get("CONFIG_DIR", ""))
                 if "APP_LOG_DIR" in imported_config and hasattr(self, 'app_log_dir'):
@@ -443,7 +421,7 @@ class SettingsTab(BaseTab):
     def collect_current_settings(self):
         """收集当前界面上的所有设置"""
         return {
-            "LIVE_DATA_URL": self.live_data_url.text(),
+            "UPLOAD_API_URL": self.upload_api_url.text(),
             "LCU_EOG_ENDPOINT": self.lcu_eog_endpoint.text(),
             "LCU_PORT": self.lcu_port.text(),
             "LCU_TOKEN": self.lcu_token.text(),
@@ -451,8 +429,6 @@ class SettingsTab(BaseTab):
             "LOG_DIR_BASE_POSTGAME": self.log_dir_postgame.text(),
             "POLL_INTERVAL": self.poll_interval.value(),
             "MAX_EOG_WAIT_TIME": self.max_eog_wait_time.value(),
-            "UPLOAD_LOGS": self.upload_logs.isChecked(),
-            "LOG_SERVER_URL": self.log_server_url.text(),
             "CONFIG_DIR": self.config_dir.text().strip() if self.config_dir.text().strip() else None,
             "APP_LOG_DIR": self.app_log_dir.text() if hasattr(self, 'app_log_dir') else "",
         }

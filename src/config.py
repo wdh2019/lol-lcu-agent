@@ -3,10 +3,12 @@
 """
 
 # --- Live Client Data API 配置 ---
-LIVE_DATA_URL = "https://127.0.0.1:2999/liveclientdata/allgamedata"
-LCU_EOG_ENDPOINT = "/lol-end-of-game/v1/eog-stats-block"
-LCU_PORT = "54694"
-LCU_TOKEN = "u6fbXvHqfOHWk"
+LIVE_DATA_URL = "https://127.0.0.1:2999/liveclientdata/allgamedata" # 获取实时游戏数据的API URL
+UPLOAD_API_URL = "https://www.example.com/api/upload" # 上传游戏数据的API URL（待替换为实际的上传地址）
+AUTO_UPLOAD_POSTGAME_DATA = True  # 是否在每次对局结束后，自动上传赛后游戏数据
+LCU_EOG_ENDPOINT = "/lol-end-of-game/v1/eog-stats-block" # 获取赛后数据的LCU端点
+LCU_PORT = "54694" # LCU 端口号（兜底值）
+LCU_TOKEN = "u6fbXvHqfOHWk" # LCU 认证令牌（兜底值）
 
 # --- 日志目录配置 ---
 import os
@@ -19,9 +21,6 @@ LOG_DIR_BASE_POSTGAME = os.path.join(documents_dir, "LoL-Data-Collector", "logs_
 POLL_INTERVAL = 10  # 减小轮询间隔，提高响应速度
 MAX_EOG_WAIT_TIME = 120  # 等待2分钟
 
-# --- 日志上传配置 ---
-UPLOAD_LOGS = True  # 是否自动上传日志
-LOG_SERVER_URL = "http://example.com/upload"  # 日志上传服务器地址
 
 # --- 应用程序配置 ---
 CONFIG_DIR = os.path.join(os.path.expanduser("~"), ".lcu-agent")  # 配置文件目录
