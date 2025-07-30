@@ -2,6 +2,9 @@ import os
 import json
 import time
 import requests
+import hashlib
+import platform
+import uuid
 from pathlib import Path
 
 class DataHandler:
@@ -19,6 +22,28 @@ class DataHandler:
         self.log_dir_base_postgame = postgame_dir
         self.current_game_log_dir_live = ""
         self.current_game_log_dir_postgame = ""
+        
+    def get_machine_id(self):
+        """
+        生成唯一的机器码
+        
+        返回:
+            str: 机器码字符串
+        """
+        try:
+            # 获取机器的硬件信息
+            mac_address = hex(uuid.getnode())[2:]  # MAC地址
+            machine_name = platform.node()  # 计算机名
+            system_info = f"{platform.system()}-{platform.machine()}"  # 系统信息
+            
+            # 组合信息并生成哈希
+            machine_info = f"{mac_address}-{machine_name}-{system_info}"
+            machine_id = hashlib.md5(machine_info.encode()).hexdigest()[:16]  # 取前16位
+            
+            return machine_id
+        except Exception as e:
+            # 如果获取失败，使用随机UUID的一部分作为备选
+            return str(uuid.uuid4()).replace('-', '')[:16]
         
     def setup_directories(self):
         """检查并创建用于存放日志的文件夹"""
@@ -60,12 +85,13 @@ class DataHandler:
             print(f"保存文件时出错: {e}")
             return None
             
-    def upload_log_file(self, file_path, server_url="https://example.com/api/upload-logs"):
+    def upload_log_file(self, file_path, file_type, server_url="https://example.com/api/upload-logs"):
         """
         将指定的日志文件以二进制流的形式上传到服务器
         
         参数:
             file_path: 要上传的文件路径
+            file_type: 文件类型，'live' 或 'postgame'
             server_url: 服务器上传接口URL
             
         返回:
@@ -79,7 +105,7 @@ class DataHandler:
                 
             # 准备文件和请求头
             files = {
-                'log_file': (
+                'file': (
                     os.path.basename(file_path),
                     open(file_path, 'rb'),
                     'application/json'
@@ -89,15 +115,16 @@ class DataHandler:
             # 准备一些元数据
             payload = {
                 'timestamp': time.strftime("%Y-%m-%d %H:%M:%S"),
-                'file_type': 'live' if '/game_logs_live/' in file_path else 'postgame',
-                'game_id': os.path.basename(os.path.dirname(file_path))  # 使用文件夹名称作为游戏ID
+                'file_type': file_type,
+                'game_id': os.path.basename(os.path.dirname(file_path)),  # 使用文件夹名称作为游戏ID
+                'machine_id': self.get_machine_id()  # 添加机器码
             }
             
             print(f"正在上传文件 {os.path.basename(file_path)} 到服务器...")
             response = requests.post(server_url, files=files, data=payload)
             
             # 关闭文件
-            files['log_file'][1].close()
+            files['file'][1].close()
             
             if response.status_code == 200:
                 print(f"文件 {os.path.basename(file_path)} 上传成功!")
@@ -139,12 +166,12 @@ class DataHandler:
         # 确定要处理的文件夹路径
         folders_to_process = []
         if log_type in ['live', 'both']:
-            folders_to_process.append(os.path.join(self.log_dir_base_live, game_folder))
+            folders_to_process.append((os.path.join(self.log_dir_base_live, game_folder), 'live'))
         if log_type in ['postgame', 'both']:
-            folders_to_process.append(os.path.join(self.log_dir_base_postgame, game_folder))
+            folders_to_process.append((os.path.join(self.log_dir_base_postgame, game_folder), 'postgame'))
             
         # 遍历所有文件夹，上传文件
-        for folder in folders_to_process:
+        for folder, current_file_type in folders_to_process:
             if not os.path.exists(folder):
                 print(f"警告: 文件夹 {folder} 不存在，跳过")
                 continue
@@ -161,7 +188,7 @@ class DataHandler:
             # 上传每个文件
             for json_file in json_files:
                 file_path = os.path.join(folder, json_file)
-                success, _ = self.upload_log_file(file_path, server_url)
+                success, _ = self.upload_log_file(file_path, current_file_type, server_url)
                 
                 if success:
                     success_count += 1

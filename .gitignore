@@ -4,3 +4,4 @@ game_logs_postgame/
 build/output/
 dist/
 __pycache__/
+src/test/uploaded_files/

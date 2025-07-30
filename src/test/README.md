@@ -66,3 +66,57 @@ python -m test.test_lcu_credentials
 1. 确保英雄联盟客户端已经启动（测试LCU功能时）
 2. 检查是否以管理员权限运行命令提示符
 3. 验证是否已安装所需的Python库，特别是PyQt5和requests
+
+## 测试服务端
+
+### 文件说明
+
+- `test_server.py` - Flask测试服务端，模拟接收上传的游戏数据文件
+- `start_test_server.bat` - Windows启动脚本，自动安装依赖并启动服务器
+- `test_upload_client.py` - 测试客户端，用于测试文件上传功能
+- `requirements_test_server.txt` - 测试服务端的Python依赖
+
+### 使用步骤
+
+#### 1. 启动测试服务器
+
+双击运行 `start_test_server.bat` 或在命令行中执行：
+
+```cmd
+cd src/test
+start_test_server.bat
+```
+
+服务器将启动在 `http://localhost:3000`
+
+#### 2. 运行测试客户端
+
+在另一个命令行窗口中运行：
+
+```cmd
+cd src/test
+python test_upload_client.py
+```
+
+### 服务器接口
+
+测试服务器提供以下接口：
+
+- **GET /**: 获取服务器状态
+- **POST /api/upload-logs**: 接收上传的游戏数据文件
+- **GET /api/files**: 获取所有上传文件的列表
+- **GET /api/stats**: 获取上传统计信息
+
+### 上传文件存储
+
+上传的文件会按以下结构存储：
+
+```
+src/test/uploaded_files/
+├── 2025-07-30_15-30-45/          # 游戏ID目录
+│   ├── live/                     # 实时数据
+│   │   └── data_xxx.json
+│   └── postgame/                 # 赛后数据
+│       └── data_zzz.json
+└── upload_log.json               # 上传日志
+```

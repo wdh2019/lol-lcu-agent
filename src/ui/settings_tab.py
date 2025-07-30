@@ -77,21 +77,21 @@ class SettingsTab(BaseTab):
         log_form.addRow("赛后日志目录:", log_dir_postgame_layout)
         
         # --- 轮询配置组 ---
-        poll_group = QGroupBox("轮询配置")
+        poll_group = QGroupBox("数据采集配置")
         poll_form = QFormLayout()
         poll_group.setLayout(poll_form)
         
-        self.poll_interval = QSpinBox()
-        self.poll_interval.setRange(1, 60)
-        self.poll_interval.setValue(config.get("POLL_INTERVAL", 5))
-        self.poll_interval.setSuffix(" 秒")
+        self.live_data_collect_interval = QSpinBox()
+        self.live_data_collect_interval.setRange(1, 3600)  # 1秒到1小时
+        self.live_data_collect_interval.setValue(config.get("LIVE_DATA_COLLECT_INTERVAL", 300))
+        self.live_data_collect_interval.setSuffix(" 秒")
         
         self.max_eog_wait_time = QSpinBox()
         self.max_eog_wait_time.setRange(30, 600)
         self.max_eog_wait_time.setValue(config.get("MAX_EOG_WAIT_TIME", 120))
         self.max_eog_wait_time.setSuffix(" 秒")
         
-        poll_form.addRow("轮询间隔:", self.poll_interval)
+        poll_form.addRow("实时数据采集间隔:", self.live_data_collect_interval)
         poll_form.addRow("赛后数据等待时间:", self.max_eog_wait_time)
         
         # --- 应用日志配置组 ---
@@ -263,7 +263,7 @@ class SettingsTab(BaseTab):
             "LCU_TOKEN": self.lcu_token.text(),
             "LOG_DIR_BASE_LIVE": self.log_dir_live.text(),
             "LOG_DIR_BASE_POSTGAME": self.log_dir_postgame.text(),
-            "POLL_INTERVAL": self.poll_interval.value(),
+            "LIVE_DATA_COLLECT_INTERVAL": self.live_data_collect_interval.value(),
             "MAX_EOG_WAIT_TIME": self.max_eog_wait_time.value(),
             "APP_LOG_DIR": self.app_log_dir.text(),
         }
@@ -333,7 +333,7 @@ class SettingsTab(BaseTab):
             self.lcu_token.setText(original_config.get("LCU_TOKEN", ""))
             self.log_dir_live.setText(original_config.get("LOG_DIR_BASE_LIVE", ""))
             self.log_dir_postgame.setText(original_config.get("LOG_DIR_BASE_POSTGAME", ""))
-            self.poll_interval.setValue(original_config.get("POLL_INTERVAL", 5))
+            self.live_data_collect_interval.setValue(original_config.get("LIVE_DATA_COLLECT_INTERVAL", 300))
             self.max_eog_wait_time.setValue(original_config.get("MAX_EOG_WAIT_TIME", 120))
             self.config_dir.setText(original_config.get("CONFIG_DIR", ""))
             
@@ -406,8 +406,8 @@ class SettingsTab(BaseTab):
                     self.log_dir_live.setText(imported_config.get("LOG_DIR_BASE_LIVE", ""))
                 if "LOG_DIR_BASE_POSTGAME" in imported_config:
                     self.log_dir_postgame.setText(imported_config.get("LOG_DIR_BASE_POSTGAME", ""))
-                if "POLL_INTERVAL" in imported_config:
-                    self.poll_interval.setValue(imported_config.get("POLL_INTERVAL", 5))
+                if "LIVE_DATA_COLLECT_INTERVAL" in imported_config:
+                    self.live_data_collect_interval.setValue(imported_config.get("LIVE_DATA_COLLECT_INTERVAL", 300))
                 if "MAX_EOG_WAIT_TIME" in imported_config:
                     self.max_eog_wait_time.setValue(imported_config.get("MAX_EOG_WAIT_TIME", 120))
                 if "CONFIG_DIR" in imported_config:
@@ -427,7 +427,7 @@ class SettingsTab(BaseTab):
             "LCU_TOKEN": self.lcu_token.text(),
             "LOG_DIR_BASE_LIVE": self.log_dir_live.text(),
             "LOG_DIR_BASE_POSTGAME": self.log_dir_postgame.text(),
-            "POLL_INTERVAL": self.poll_interval.value(),
+            "LIVE_DATA_COLLECT_INTERVAL": self.live_data_collect_interval.value(),
             "MAX_EOG_WAIT_TIME": self.max_eog_wait_time.value(),
             "CONFIG_DIR": self.config_dir.text().strip() if self.config_dir.text().strip() else None,
             "APP_LOG_DIR": self.app_log_dir.text() if hasattr(self, 'app_log_dir') else "",

@@ -202,8 +202,9 @@ class LogsTab(BaseTab):
             time_str = time_obj.strftime("%Y-%m-%d %H:%M:%S")
             self.log_table.setItem(row_position, 2, QTableWidgetItem(time_str))
             
-            # 存储完整路径到第一列的数据中
+            # 存储完整路径和文件类型到第一列的数据中
             self.log_table.item(row_position, 0).setData(Qt.UserRole, log_file['path'])
+            self.log_table.item(row_position, 0).setData(Qt.UserRole + 1, log_file['type'])
         
         self.update_status(f"已加载 {len(log_files)} 数据文件")
     
@@ -230,10 +231,25 @@ class LogsTab(BaseTab):
         # 从数据中获取完整路径
         return self.log_table.item(selected_row, 0).data(Qt.UserRole)
     
+    def get_selected_log_type(self):
+        """获取当前选中的数据文件类型"""
+        selected_rows = self.log_table.selectionModel().selectedRows()
+        if not selected_rows:
+            selected_items = self.log_table.selectedItems()
+            if not selected_items:
+                return None
+            selected_row = selected_items[0].row()
+        else:
+            selected_row = selected_rows[0].row()
+        
+        # 从数据中获取文件类型
+        return self.log_table.item(selected_row, 0).data(Qt.UserRole + 1)
+    
     def upload_selected_log(self):
         """上传选中的数据文件"""
         log_path = self.get_selected_log_path()
-        if not log_path:
+        log_type = self.get_selected_log_type()
+        if not log_path or not log_type:
             self.show_warning("上传错误", "请先选择一个数据文件")
             return
         
@@ -245,9 +261,9 @@ class LogsTab(BaseTab):
             data_handler = DataHandler(LOG_DIR_BASE_LIVE, LOG_DIR_BASE_POSTGAME)
             
             # 上传文件
-            from src.config import LOG_SERVER_URL
+            from src.config import UPLOAD_API_URL
             self.update_status(f"正在上传 {os.path.basename(log_path)}...")
-            success, response = data_handler.upload_log_file(log_path, LOG_SERVER_URL)
+            success, response = data_handler.upload_log_file(log_path, log_type, UPLOAD_API_URL)
             
             if success:
                 self.show_message("上传成功", f"文件已成功上传\n\n服务器响应: {response}")

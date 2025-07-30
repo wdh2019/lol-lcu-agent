@@ -4,7 +4,7 @@
 
 # --- Live Client Data API 配置 ---
 LIVE_DATA_URL = "https://127.0.0.1:2999/liveclientdata/allgamedata" # 获取实时游戏数据的API URL
-UPLOAD_API_URL = "https://www.example.com/api/upload" # 上传游戏数据的API URL（待替换为实际的上传地址）
+UPLOAD_API_URL = "http://localhost:3000/api/upload-logs" # 上传游戏数据的API URL（测试服务器）
 AUTO_UPLOAD_POSTGAME_DATA = True  # 是否在每次对局结束后，自动上传赛后游戏数据
 LCU_EOG_ENDPOINT = "/lol-end-of-game/v1/eog-stats-block" # 获取赛后数据的LCU端点
 LCU_PORT = "54694" # LCU 端口号（兜底值）
@@ -18,7 +18,8 @@ LOG_DIR_BASE_LIVE = os.path.join(documents_dir, "LoL-Data-Collector", "logs_live
 LOG_DIR_BASE_POSTGAME = os.path.join(documents_dir, "LoL-Data-Collector", "logs_postgame")
 
 # --- 轮询配置 ---
-POLL_INTERVAL = 10  # 减小轮询间隔，提高响应速度
+POLL_INTERVAL = 5  # 状态机轮询间隔(秒)，用于检查游戏状态变化
+LIVE_DATA_COLLECT_INTERVAL = 300  # 实时数据采集间隔(秒)，游戏中数据采集频率，默认5分钟
 MAX_EOG_WAIT_TIME = 120  # 等待2分钟
 
 

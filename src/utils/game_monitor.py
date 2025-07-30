@@ -10,6 +10,7 @@ from src.config import (  # 明确导入需要的配置项
     AUTO_UPLOAD_POSTGAME_DATA,
     LCU_EOG_ENDPOINT,
     POLL_INTERVAL,
+    LIVE_DATA_COLLECT_INTERVAL,
     MAX_EOG_WAIT_TIME,
     LOG_DIR_BASE_LIVE,
     LOG_DIR_BASE_POSTGAME,
@@ -42,6 +43,7 @@ def main_loop(stop_check_func=None, print_func=None, config_dict=None):
     log_dir_base_live = config_dict.get("LOG_DIR_BASE_LIVE", LOG_DIR_BASE_LIVE)
     log_dir_base_postgame = config_dict.get("LOG_DIR_BASE_POSTGAME", LOG_DIR_BASE_POSTGAME)
     poll_interval = config_dict.get("POLL_INTERVAL", POLL_INTERVAL)
+    live_data_collect_interval = config_dict.get("LIVE_DATA_COLLECT_INTERVAL", LIVE_DATA_COLLECT_INTERVAL)
     max_eog_wait_time = config_dict.get("MAX_EOG_WAIT_TIME", MAX_EOG_WAIT_TIME)
     
     # 初始化数据处理器
@@ -54,6 +56,7 @@ def main_loop(stop_check_func=None, print_func=None, config_dict=None):
     # 初始化状态机
     current_state = "WAITING_FOR_GAME"
     lcu_port, lcu_token = None, None
+    last_live_data_time = 0  # 记录上次采集实时数据的时间
 
     log("高级数据采集程序已启动...")
     log("--------------------------------------------------")
@@ -74,19 +77,26 @@ def main_loop(stop_check_func=None, print_func=None, config_dict=None):
                 current_state = "IN_GAME"
                 # 采集第一帧数据
                 data_handler.save_data_to_json(data_or_error, 'live')
+                last_live_data_time = time.time()  # 记录第一次采集时间
 
         elif current_state == "IN_GAME":
-            log("状态: [游戏中] - 正在采集中...")
+            # 始终检查游戏状态，确保及时响应游戏结束
             success, data_or_error = api_client.get_live_game_data()
             
             if success:
-                data_handler.save_data_to_json(data_or_error, 'live')
+                # 游戏仍在进行中，检查是否需要采集数据
+                current_time = time.time()
+                if current_time - last_live_data_time >= live_data_collect_interval:
+                    log("状态: [游戏中] - 正在采集中...")
+                    data_handler.save_data_to_json(data_or_error, 'live')
+                    last_live_data_time = current_time  # 更新最后采集时间
             else:
                 # 连接失败，意味着游戏结束
                 log("游戏结束！切换到 [等待结算页面] 状态。")
                 current_state = "WAITING_FOR_EOG"
                 # 尝试立即获取LCU凭证
                 lcu_port, lcu_token = get_lcu_credentials(LCU_PORT, LCU_TOKEN)
+                last_live_data_time = 0  # 重置采集时间
 
         elif current_state == "WAITING_FOR_EOG":
             log("状态: [等待结算页面] - 正在扫描客户端...")
@@ -131,10 +141,7 @@ def main_loop(stop_check_func=None, print_func=None, config_dict=None):
                 main_loop.failure_count += 1
                 if main_loop.failure_count % 10 == 1:  # 每10次显示一次详细信息
                     log("\n【重要提示】如果客户端确实在运行，可能是由于权限问题无法获取凭证。")
-                    log("请以管理员身份运行此脚本:")
-                    log("1. 右键点击命令提示符(cmd)或PowerShell，选择\"以管理员身份运行\"")
-                    log("2. 导航到脚本所在目录")
-                    log("3. 执行命令: python main.py")
+                    log("请以管理员身份运行此应用")
                     # 列出当前系统中的进程，帮助用户查看是否有客户端进程
                     list_running_processes()
                 
@@ -160,15 +167,15 @@ def main_loop(stop_check_func=None, print_func=None, config_dict=None):
                     
                     # 如果配置了自动上传，则上传本局的赛后游戏数据
                     if AUTO_UPLOAD_POSTGAME_DATA:
-                        log("开始上传本局游戏的日志文件...")
+                        log("开始上传本局游戏的数据文件...")
                         success_count, failed_count = data_handler.upload_game_logs(
-                            log_type='postgame', 
+                            log_type='both', 
                             server_url=UPLOAD_API_URL,
                         )
                         if success_count > 0:
-                            log(f"成功上传 {success_count} 个日志文件")
+                            log(f"成功上传 {success_count} 个数据文件")
                         if failed_count > 0:
-                            log(f"警告: {failed_count} 个日志文件上传失败")
+                            log(f"警告: {failed_count} 个数据文件上传失败")
                     
                     log("重置状态，等待下一局游戏。")
                     log("--------------------------------------------------")
@@ -190,5 +197,5 @@ def main_loop(stop_check_func=None, print_func=None, config_dict=None):
                         log("本次尝试未获取到结算数据，将继续等待...")
                         # 继续等待，下一轮再试
 
-        # 轮询延时
+        # 使用标准轮询间隔进行状态检查
         time.sleep(poll_interval)
